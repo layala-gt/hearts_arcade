@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#E4F0EA">
+<title>HEARTS Arcade: toma de presión</title>
+<meta name="description" content="Juego rápido para practicar la técnica de toma de presión arterial y los valores de referencia de HEARTS.">
+<meta property="og:title" content="HEARTS Arcade: toma de presión">
+<meta property="og:description" content="¿Cuántos retos de toma de presión resuelves en 60 segundos?">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="HEARTS Arcade">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#E4F0EA;--panel:#FFFFFF;--ink:#000000;--ok:#A6DDB7;--bad:#F3B3B9;--bar:#C8515C;--lcd:#A8D8B0;--lcd-ink:#000000;--t1:24px;--t2:17px;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#13221B;--panel:#1D3128;--ink:#FFFFFF;--ok:#2E6A44;--bad:#7C3039;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#13221B;--panel:#1D3128;--ink:#FFFFFF;--ok:#2E6A44;--bad:#7C3039;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px);height:100%}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);font-family:"Pixelify Sans",ui-monospace,monospace;font-size:var(--t2);line-height:1.3;overscroll-behavior:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
+#app{max-width:480px;margin:0 auto;padding:12px 14px 16px;display:flex;flex-direction:column;gap:10px}
+.t1{font-size:var(--t1);line-height:1.15;font-weight:600;margin:0}
+.t2{font-size:var(--t2);margin:0}
+.c{text-align:center}
+.logo{display:block;width:min(100%,320px);height:auto;margin:8px auto 4px}
+.hud{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.bar{height:12px;border:3px solid var(--ink);background:var(--panel)}
+.bar i{display:block;height:100%;width:100%;background:var(--bar)}
+.bar.small{height:10px}
+.stage{position:relative;border:4px solid var(--ink);background:var(--panel);aspect-ratio:4/3;overflow:hidden}
+#scene{display:block;width:100%;height:100%;touch-action:none}
+.lcdwrap{position:absolute;inset:0;display:grid;place-items:center;padding:14px;background:var(--panel)}
+.lcd{width:100%;max-width:340px;background:var(--lcd);color:var(--lcd-ink);border:4px solid #000000;box-shadow:0 0 0 10px #E6E6E6,0 0 0 14px #000000;padding:12px 14px;display:grid;gap:6px}
+.lcd p{margin:0}
+.fb{position:absolute;left:10px;right:10px;bottom:10px;border:3px solid var(--ink);padding:10px 12px;display:grid;gap:4px;background:var(--panel)}
+.opts{display:grid;gap:10px}
+.opts.n2{grid-template-columns:1fr 1fr}.opts.n3{grid-template-columns:1fr 1fr 1fr}.opts.n4{grid-template-columns:1fr 1fr}
+button{font:inherit;color:var(--ink);background:var(--panel);border:3px solid var(--ink);box-shadow:4px 4px 0 var(--ink);padding:10px 10px;min-height:52px;cursor:pointer;line-height:1.2;touch-action:manipulation}
+button:active{transform:translate(2px,2px);box-shadow:2px 2px 0 var(--ink)}
+button:disabled{cursor:default;color:var(--ink);opacity:1}
+button:focus-visible{outline:3px dashed var(--ink);outline-offset:3px}
+button.main{font-weight:600}
+.ok{background:var(--ok)!important}.bad{background:var(--bad)!important}
+.box{border:3px solid var(--ink);background:var(--panel);padding:12px 14px;display:grid;gap:8px}
+.list{margin:0;padding-left:1.3em;display:grid;gap:6px}
+.bob{animation:bob .6s steps(2) infinite}
+@keyframes bob{50%{transform:translateY(1px)}}
+.wig{animation:wig .4s steps(2) infinite}
+@keyframes wig{50%{transform:translateX(.6px)}}
+@media (prefers-reduced-motion:reduce){.bob,.wig{animation:none}}
+input{font:inherit;font-size:var(--t2);color:var(--ink);background:var(--panel);border:3px solid var(--ink);padding:10px 12px;width:100%;-webkit-user-select:text;user-select:text;border-radius:0}
+input:focus-visible{outline:3px dashed var(--ink);outline-offset:3px}
+.card{display:block;width:100%;height:auto;border:3px solid var(--ink);-webkit-touch-callout:default;-webkit-user-select:auto;user-select:auto}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <section id="home">
+    <img class="logo" alt="HEARTS" src="data:image/png;base64,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">
+    <div class="box">
+      <h1 class="t1 c">Arcade de la presión</h1>
+      <p class="t2">Tienes 60 segundos para resolver retos rápidos de la técnica correcta y de los valores de referencia. Toca o desliza según lo que pida cada reto.</p>
+      <p class="t2">Cada acierto suma puntos; si fallas, pierdes 3 segundos.</p>
+      <p class="t2" id="best"></p>
+    </div>
+    <div class="box" style="margin-top:12px">
+      <label class="t2" for="name">Tu nombre</label>
+      <input id="name" type="text" maxlength="40" autocomplete="name" enterkeyhint="next" placeholder="Escribe tu nombre">
+      <label class="t2" for="service">Tu servicio de salud</label>
+      <input id="service" type="text" maxlength="80" autocomplete="organization" enterkeyhint="go" placeholder="Por ejemplo: Puesto de salud de ...">
+      <p class="t2 bad" id="nameErr" style="padding:6px 8px" hidden></p>
+    </div>
+    <div class="opts" style="margin-top:12px"><button type="button" class="main" id="play">Jugar</button></div>
+  </section>
+
+  <section id="game" hidden>
+    <div class="hud"><p class="t2" id="clock">1:00</p><p class="t2" id="pts">0 puntos</p></div>
+    <div class="bar"><i id="gbar"></i></div>
+    <div class="c" style="display:grid;gap:2px">
+      <p class="t1" id="task"></p>
+      <p class="t2" id="hint"></p>
+    </div>
+    <div class="bar small"><i id="mbar"></i></div>
+    <div class="stage">
+      <svg id="scene" viewBox="0 0 64 48" shape-rendering="crispEdges" role="img" aria-label="Escena del consultorio"></svg>
+      <div class="lcdwrap" id="lcdwrap" hidden><div class="lcd" id="lcd"></div></div>
+      <div class="fb" id="fb" hidden><p class="t1" id="fbt"></p><p class="t2" id="fbs"></p></div>
+    </div>
+    <div class="opts" id="opts"></div>
+  </section>
+
+  <section id="over" hidden>
+    <img class="logo" alt="HEARTS" src="data:image/png;base64,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">
+    <div class="box c">
+      <p class="t1" id="final"></p>
+      <p class="t2" id="stats"></p>
+    </div>
+    <div class="box">
+      <p class="t2"><b>Tu imagen de resultado</b></p>
+      <p class="t2" id="cardWait">Preparando la imagen…</p>
+      <img class="card" id="card" alt="Imagen con tu nombre y tu puntaje" hidden>
+      <div class="opts n2" id="cardBtns" hidden>
+        <button type="button" class="main" id="share">Compartir</button>
+        <button type="button" id="save">Guardar imagen</button>
+      </div>
+      <p class="t2" id="cardMsg"></p>
+    </div>
+    <div class="box" id="rank" hidden>
+      <p class="t2"><b>Ranking general</b></p>
+      <p class="t2" id="rankMsg">Cargando ranking…</p>
+      <ol class="list t2" id="rankList"></ol>
+    </div>
+    <div class="box" id="review"></div>
+    <div class="box">
+      <p class="t2"><b>Clasificación (normas del MSPAS)</b></p>
+      <ul class="list t2">
+        <li>Normal: menos de 120 y menos de 80.</li>
+        <li>Elevada: 120 a 129 y menos de 80.</li>
+        <li>Estadio I: 130 a 139 o 80 a 89.</li>
+        <li>Estadio II: 140 o más o 90 o más.</li>
+        <li>Paciente con tratamiento controlado: menos de 130 y menos de 80.</li>
+      </ul>
+    </div>
+    <div class="opts" style="margin-top:4px"><button type="button" class="main" id="again">Jugar otra vez</button></div>
+  </section>
+
+</div>
+<script>
+/* Pega aquí la URL de tu aplicación web de Google Apps Script (termina en /exec).
+   Si la dejas vacía, el juego funciona igual, pero sin guardar resultados ni ranking. */
+const SHEET_URL = 'https://script.google.com/macros/s/AKfycbz1xNDhUQYndk3SLpHSrdV5w8pYDtjU0puYYwSiHyC556DxgoBFKJveG5Z7iIZChqHI/exec';
+
+const $ = s => document.querySelector(s);
+const scene = $('#scene');
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* Sound */
+let ac = null;
+function tone(seq) {
+  try {
+    ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+    if (ac.state === 'suspended') ac.resume();
+    const t = ac.currentTime;
+    seq.forEach(([f, d], i) => {
+      const o = ac.createOscillator(), g = ac.createGain();
+      o.type = 'square'; o.frequency.value = f;
+      g.gain.setValueAtTime(0.05, t + d); g.gain.exponentialRampToValueAtTime(0.001, t + d + 0.12);
+      o.connect(g).connect(ac.destination); o.start(t + d); o.stop(t + d + 0.13);
+    });
+  } catch (e) {}
+}
+const sfx = { ok: () => tone([[660, 0], [990, 0.08]]), bad: () => tone([[220, 0], [160, 0.1]]), end: () => tone([[523, 0], [659, 0.12], [784, 0.24], [1046, 0.36]]) };
+
+/* Storage */
+function best() { try { return +(localStorage.getItem('hearts-arcade-best') || 0); } catch (e) { return 0; } }
+function saveBest(v) { try { if (v > best()) localStorage.setItem('hearts-arcade-best', String(v)); } catch (e) {} }
+
+/* Pixel art */
+const C = { wall: '#CFE8DC', stripe: '#BBDDCC', base: '#7E9A8C', floor: '#A9BCC6', tile: '#9AB0BC', wood: '#6B4A2E', top: '#A87C52', tw: '#8A6440', skin: '#C68A62', hair: '#2B1D16', sw: '#2F6DB5', sw2: '#24548F', pants: '#3A3A48', pants2: '#2C2C38', shoe: '#1C1C1C', cuff: '#162A54', dev: '#E9E9E9', dk: '#1C1C1C', lcd: '#A8D8B0', red: '#C8515C', white: '#FFFFFF', gold: '#F2C230', water: '#4FA3D9' };
+const r = (x, y, w, h, c) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${c}"/>`;
+function room(st) {
+  let s = r(0, 0, 64, 38, C.wall) + r(0, 30, 64, 1, C.stripe) + r(0, 37, 64, 1, C.base) + r(0, 38, 64, 10, C.floor);
+  for (let x = 0; x < 64; x += 4) for (let y = 38; y < 48; y += 4) if (((x + y) / 4) % 2) s += r(x, y, 4, 4, C.tile);
+  if (st.door) s += r(0, 8, 8, 30, C.dk) + r(1, 9, 6, 29, C.tw) + r(2, 12, 4, 4, C.white) + r(3, 13, 2, 1, C.water) + r(3, 14, 2, 1, C.water) + r(4, 12, 1, 1, C.water) + r(5, 24, 1, 2, C.gold);
+  else s += r(3, 3, 10, 9, C.dk) + r(4, 4, 8, 7, C.white) + r(5, 5, 2, 1, C.red) + r(8, 5, 2, 1, C.red) + r(5, 6, 5, 2, C.red) + r(6, 8, 3, 1, C.red) + r(7, 9, 1, 1, C.red);
+  s += r(26, 23, 32, 2, C.top) + r(26, 25, 32, 1, C.tw) + r(28, 26, 2, 12, C.tw) + r(54, 26, 2, 12, C.tw);
+  s += r(8, 13, 2, 20, C.wood) + r(8, 29, 16, 2, C.wood) + r(9, 31, 2, 7, C.wood) + r(21, 31, 2, 7, C.wood);
+  if (st.feet) s += r(9, 35, 14, 1, C.wood);
+  return s;
+}
+function legs(st) {
+  if (st.legs) return r(12, 27, 13, 3, C.pants) + r(21, 30, 3, 6, C.pants) + r(21, 36, 5, 2, C.shoe) + r(14, 24, 12, 3, C.pants2) + r(24, 26, 3, 8, C.pants2) + r(24, 33, 5, 2, C.shoe);
+  if (st.feet) return r(15, 30, 3, 3, C.pants2) + r(13, 33, 4, 2, C.shoe) + r(12, 27, 13, 3, C.pants) + r(18, 30, 3, 3, C.pants) + r(16, 33, 5, 2, C.shoe);
+  return r(18, 30, 3, 7, C.pants2) + r(18, 36, 5, 2, C.shoe) + r(12, 27, 13, 3, C.pants) + r(21, 30, 3, 6, C.pants) + r(21, 36, 5, 2, C.shoe);
+}
+function upper(st) {
+  const arm = st.sleeve ? C.sw2 : C.skin;
+  let s = r(10, 15, 9, 14, C.sw) + r(14, 14, 3, 1, C.skin) + r(12, 6, 7, 3, C.hair) + r(12, 8, 7, 6, C.skin) + r(12, 8, 2, 3, C.hair) + r(17, 10, 1, 1, C.dk);
+  if (st.talk) s += r(17, 12, 2, 1, '#7A2E2E');
+  s += r(16, 15, 3, 1, C.sw2) + r(16, 16, 3, 6, arm);
+  s += st.arm ? r(16, 22, 3, 7, arm) + r(16, 29, 3, 2, C.skin) : r(16, 21, 14, 2, arm) + r(30, 21, 3, 2, C.skin);
+  s += r(20, 17, 22, 1, C.dk) + r(15, 16, 5, 3, C.cuff);
+  return s;
+}
+function bubble(mark) {
+  let s = r(20, 0, 15, 9, C.dk) + r(21, 1, 13, 7, C.white) + r(21, 9, 2, 2, C.dk);
+  return s + (mark === '!' ? r(27, 2, 1, 3, C.dk) + r(27, 6, 1, 1, C.dk) : r(24, 4, 1, 1, C.dk) + r(27, 4, 1, 1, C.dk) + r(30, 4, 1, 1, C.dk));
+}
+const ARROWS = { up: ['..k..', '.kkk.', 'kkkkk', '.kkk.', '.kkk.'], down: ['.kkk.', '.kkk.', 'kkkkk', '.kkk.', '..k..'], left: ['..k..', '.kk..', 'kkkkk', '.kk..', '..k..'] };
+function arrow(dir, x, y) {
+  let s = '';
+  ARROWS[dir].forEach((row, j) => [...row].forEach((c, i) => { if (c === 'k') s += r(x + i, y + j, 1, 1, C.red); }));
+  return `<g class="bob">${s}</g>`;
+}
+function draw(st, extra) { scene.innerHTML = markup(st, extra); }
+function markup(st, extra) {
+  const lean = st.lean ? 'translate(3,0)' : '';
+  return room(st) + legs(st) + `<g transform="${lean}"><g class="${st.bladder ? 'wig' : ''}">${upper(st)}</g></g>` +
+    r(42, 13, 14, 10, C.dk) + r(43, 14, 12, 8, C.dev) + r(45, 15, 8, 4, C.lcd) + r(45, 20, 2, 1, C.red) + r(51, 20, 2, 1, C.cuff) +
+    (st.talk ? bubble('.') : st.bladder ? bubble('!') : '') + (extra || '');
+}
+
+/* Data */
+const pick = a => a[Math.floor(Math.random() * a.length)];
+const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const bp = v => v[0] + '/' + v[1];
+const CLS = ['Normal', 'Elevada', 'Estadio I', 'Estadio II'];
+const CLS_RULE = ['Normal: menos de 120 y menos de 80.', 'Elevada: 120 a 129 y menos de 80.', 'Estadio I: 130 a 139 o 80 a 89.', 'Estadio II: 140 o más o 90 o más.'];
+const level = (s, d) => s >= 140 || d >= 90 ? 3 : s >= 130 || d >= 80 ? 2 : s >= 120 ? 1 : 0;
+const ri = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+const trap = () => Math.random() < 0.3;
+const TRAP = {
+  cls: [[125, 93], [122, 84], [133, 65], [120, 79], [129, 79], [118, 80], [130, 72], [139, 89], [140, 60], [119, 90]],
+  ctrl: [[130, 76], [118, 80], [129, 79], [128, 65], [130, 80], [124, 82]],
+  dx: [[124, 79], [131, 70], [126, 81], [129, 79], [130, 64], [118, 80]],
+};
+function genCls() {
+  if (trap()) return pick(TRAP.cls);
+  const k = ri(0, 3);
+  if (k === 0) return [ri(100, 119), ri(60, 79)];
+  if (k === 1) return [ri(120, 129), ri(60, 79)];
+  if (k === 2) return Math.random() < 0.5 ? [ri(130, 139), ri(60, 89)] : [ri(100, 129), ri(80, 89)];
+  return Math.random() < 0.5 ? [ri(140, 175), ri(60, 99)] : [ri(100, 139), ri(90, 105)];
+}
+function genSplit(pool) {
+  if (trap()) return pick(pool);
+  if (Math.random() < 0.5) return [ri(100, 129), ri(60, 79)];
+  return Math.random() < 0.5 ? [ri(130, 165), ri(60, 95)] : [ri(105, 129), ri(80, 95)];
+}
+function genAvg() {
+  const s = ri(110, 160), d = ri(55, 100);
+  let os = 2 * ri(-6, 6), od = 2 * ri(-5, 5);
+  if (!os && !od) os = 4;
+  return [[s, d], [s + os, d + od]];
+}
+function genRound() {
+  let s, d;
+  do { s = ri(101, 169); } while (s % 5 === 0);
+  do { d = ri(61, 99); } while (d % 5 === 0);
+  const r5 = [Math.round(s / 5) * 5, Math.round(d / 5) * 5], r10 = [Math.round(s / 10) * 10, Math.round(d / 10) * 10];
+  let x = bp(r5), y = bp(r10);
+  if (x === y) y = bp([r5[0] + 5, r5[1]]);
+  return [[s, d], x, y];
+}
+function genArm() { let a; do { a = ri(18, 41); } while (a === 22 || a === 32); return a; }
+const GAMES = {
+  talk: { kind: 'tap', task: '¡Que no hable!', hint: 'Toca al paciente.', st: { talk: 1 }, box: [10, 0, 26, 15], fact: 'Hablar o escuchar con atención agrega hasta 10 mmHg.' },
+  arm: { kind: 'swipe', dir: 'up', task: '¡Brazo a la mesa!', hint: 'Desliza el brazo hacia arriba.', st: { arm: 1 }, box: [11, 17, 13, 17], arrow: [21, 24], fact: 'No apoyar el brazo a la altura del corazón agrega hasta 10 mmHg.' },
+  sleeve: { kind: 'swipe', dir: 'up', task: '¡Brazo sin ropa!', hint: 'Desliza la manga hacia arriba.', st: { sleeve: 1 }, box: [11, 12, 22, 13], arrow: [23, 9], fact: 'Medir sobre ropa gruesa agrega de 5 a 50 mmHg.' },
+  legs: { kind: 'swipe', dir: 'down', task: '¡Descruza las piernas!', hint: 'Desliza la pierna hacia abajo.', st: { legs: 1 }, box: [12, 20, 20, 18], arrow: [29, 18], fact: 'Las piernas cruzadas agregan de 2 a 8 mmHg.' },
+  lean: { kind: 'swipe', dir: 'left', task: '¡Espalda al respaldo!', hint: 'Desliza al paciente hacia atrás.', st: { lean: 1 }, box: [8, 4, 22, 27], arrow: [24, 9], fact: 'No apoyar la espalda agrega hasta 6 mmHg.' },
+  feet: { kind: 'swipe', dir: 'down', task: '¡Pies al piso!', hint: 'Desliza los pies hacia abajo.', st: { feet: 1 }, box: [10, 26, 18, 14], arrow: [24, 30], fact: 'No apoyar los pies en el piso agrega hasta 6 mmHg.' },
+  bladder: { kind: 'tap', task: '¡Primero al baño!', hint: 'Toca la puerta del baño.', st: { bladder: 1, door: 1 }, box: [0, 7, 11, 32], fact: 'La vejiga llena agrega hasta 10 mmHg.' },
+  cuff: { kind: 'choice', task: '¡Elige el manguito!', fact: 'Un manguito pequeño para el brazo agrega de 2 a 10 mmHg.', make() {
+    const a = genArm(), ans = a < 22 ? 0 : a < 32 ? 1 : 2;
+    return { lcd: [['Circunferencia del brazo', a + ' cm']], opts: ['Pequeño: 17 a 22 cm', 'Mediano: 22 a 32 cm', 'Grande: 32 a 42 cm'], ans, fact: this.fact };
+  } },
+  avg: { kind: 'choice', task: '¡Saca el promedio!', fact: 'Se registra el promedio de 2 lecturas.', make() {
+    const [a, b] = genAvg(), m = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2], opts = shuffle([bp(m), bp(a), bp(b)]);
+    return { lcd: [['Lectura 1', bp(a)], ['Lectura 2', bp(b)]], opts, ans: opts.indexOf(bp(m)), fact: `(${a[0]} + ${b[0]}) ÷ 2 = ${m[0]} y (${a[1]} + ${b[1]}) ÷ 2 = ${m[1]}.` };
+  } },
+  cls: { kind: 'choice', task: '¡Clasifica!', fact: 'Basta con una cifra en el rango más alto para clasificar ahí.', make() {
+    const v = genCls(), ans = level(v[0], v[1]);
+    return { lcd: [['Promedio de hoy (mmHg)', bp(v)]], opts: CLS, ans, fact: CLS_RULE[ans] };
+  } },
+  ctrl: { kind: 'choice', task: '¿Está controlado?', fact: 'Controlado: menos de 130 y menos de 80.', make() {
+    const v = genSplit(TRAP.ctrl), ans = v[0] < 130 && v[1] < 80 ? 0 : 1;
+    return { lcd: [['Paciente con tratamiento', bp(v)]], opts: ['Controlado', 'No controlado'], ans, fact: 'Controlado: menos de 130 y menos de 80. Si una cifra llega al límite, no está controlado.' };
+  } },
+  round: { kind: 'choice', task: '¿Qué anotas?', fact: 'No aproximes el valor del monitor: cada mmHg cuenta.', make() {
+    const [v, d1, d2] = genRound(), opts = shuffle([bp(v), d1, d2]);
+    return { lcd: [['El monitor marca', bp(v)]], opts, ans: opts.indexOf(bp(v)), fact: this.fact };
+  } },
+  dx: { kind: 'choice', task: '¿Tiene hipertensión?', fact: 'Un promedio de 130/80 o más en la consulta de hoy basta para diagnosticar hipertensión.', make() {
+    const v = genSplit(TRAP.dx), ans = v[0] >= 130 || v[1] >= 80 ? 0 : 1;
+    return { lcd: [['Primera consulta, promedio de hoy', bp(v)]], opts: ['Sí, tiene hipertensión', 'No tiene hipertensión'], ans, fact: ans === 0 ? this.fact : 'Con un promedio menor de 130/80 no hay hipertensión.' };
+  } },
+};
+
+/* Game */
+let G = null;
+const show = id => ['home', 'game', 'over'].forEach(s => $('#' + s).hidden = s !== id);
+const active = () => G && G.phase === 'play' && !G.paused;
+function drawBag() {
+  if (!G.bag.length) { G.bag = shuffle(Object.keys(GAMES)); if (G.bag[0] === G.last) G.bag.push(G.bag.shift()); }
+  return G.bag.shift();
+}
+function start() {
+  const tidy = v => v.trim().replace(/\s+/g, ' ');
+  const nm = tidy($('#name').value), sv = tidy($('#service').value);
+  if (!nm || !sv) {
+    const err = $('#nameErr');
+    err.textContent = !nm ? 'Escribe tu nombre para empezar.' : 'Escribe tu servicio de salud para empezar.';
+    err.hidden = false; (!nm ? $('#name') : $('#service')).focus(); return;
+  }
+  $('#nameErr').hidden = true;
+  try { localStorage.setItem('hearts-arcade-name', nm); localStorage.setItem('hearts-arcade-service', sv); } catch (e) {}
+  tone([[440, 0]]);
+  G = { name: nm, service: sv, card: null, phase: 'play', time: 60, score: 0, streak: 0, ok: 0, n: 0, missed: new Set(), bag: [], last: null, paused: false, t: performance.now() };
+  show('game'); next(); requestAnimationFrame(loop);
+}
+function next() {
+  const id = drawBag(), def = GAMES[id];
+  G.last = id; G.n++;
+  const action = def.kind !== 'choice';
+  const limit = action ? Math.max(2.2, 4 - 0.15 * G.ok) : Math.max(8, 10 - 0.2 * G.ok);
+  G.cur = { id, def, limit, left: limit, data: action ? null : def.make() };
+  G.paused = false; G.drag = null;
+  $('#fb').hidden = true;
+  $('#task').textContent = def.task;
+  const opts = $('#opts'); opts.innerHTML = ''; opts.className = 'opts';
+  if (action) {
+    $('#lcdwrap').hidden = true;
+    $('#hint').textContent = def.hint;
+    draw(def.st, def.arrow ? arrow(def.dir, def.arrow[0], def.arrow[1]) : '');
+  } else {
+    $('#hint').textContent = 'Toca la respuesta correcta.';
+    const d = G.cur.data;
+    $('#lcd').innerHTML = '';
+    d.lcd.forEach(([label, val]) => { const a = document.createElement('p'), b = document.createElement('p'); a.className = 't2'; b.className = 't1'; a.textContent = label; b.textContent = val; $('#lcd').append(a, b); });
+    $('#lcdwrap').hidden = false;
+    opts.classList.add('n' + d.opts.length);
+    d.opts.forEach((t, i) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = t; b.onclick = () => answer(i, b); opts.append(b); });
+  }
+  hud();
+}
+function answer(i, b) {
+  if (!active()) return;
+  const d = G.cur.data, ok = i === d.ans;
+  [...$('#opts').children].forEach((x, k) => { x.disabled = true; if (k === d.ans) x.classList.add('ok'); });
+  if (!ok) b.classList.add('bad');
+  finish(ok);
+}
+function finish(ok) {
+  G.paused = true;
+  const c = G.cur, fact = c.data ? c.data.fact : c.def.fact;
+  if (ok) {
+    G.ok++; G.streak++;
+    const pts = 100 + Math.round(50 * c.left / c.limit) + Math.min(100, (G.streak - 1) * 10);
+    G.score += pts; sfx.ok();
+    if (!c.data) draw({ door: c.def.st.door });
+    $('#fbt').textContent = `¡Bien! +${pts}` + (G.streak > 2 ? `  racha ${G.streak}` : '');
+    $('#fbs').textContent = fact;
+  } else {
+    G.streak = 0; G.time = Math.max(0, G.time - 3); G.missed.add(c.id); sfx.bad();
+    try { navigator.vibrate && navigator.vibrate(80); } catch (e) {}
+    $('#fbt').textContent = c.left <= 0 ? '¡Se acabó el tiempo! −3 s' : '¡Uy! −3 s';
+    $('#fbs').textContent = (c.data ? 'Era: ' + c.data.opts[c.data.ans] + '. ' : '') + fact;
+  }
+  $('#fb').className = 'fb ' + (ok ? 'ok' : 'bad'); $('#fb').hidden = false;
+  hud();
+  setTimeout(() => { if (!G || G.phase !== 'play') return; if (G.time <= 0) over(); else next(); }, ok ? 1100 : 1900);
+}
+function hud() {
+  const t = Math.ceil(G.time);
+  $('#clock').textContent = `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
+  $('#pts').textContent = `${G.score} puntos`;
+  $('#gbar').style.width = (G.time / 60 * 100) + '%';
+  $('#mbar').style.width = (G.cur ? Math.max(0, G.cur.left / G.cur.limit) * 100 : 0) + '%';
+}
+function loop(now) {
+  if (!G || G.phase !== 'play') return;
+  const dt = Math.min(0.1, (now - G.t) / 1000); G.t = now;
+  if (!G.paused && !document.hidden) {
+    G.time -= dt; G.cur.left -= dt;
+    if (G.time <= 0) { G.time = 0; hud(); over(); return; }
+    if (G.cur.left <= 0) { G.cur.left = 0; finish(false); }
+    hud();
+  }
+  requestAnimationFrame(loop);
+}
+function over() {
+  G.phase = 'over'; sfx.end(); saveBest(G.score);
+  $('#final').textContent = `${G.score} puntos`;
+  $('#stats').textContent = `Aciertos: ${G.ok} de ${G.n}. Tu récord: ${best()} puntos.`;
+  const rv = $('#review'); rv.innerHTML = '';
+  const title = document.createElement('p'); title.className = 't2'; title.innerHTML = '<b></b>';
+  const list = document.createElement('ul'); list.className = 'list t2';
+  if (G.missed.size) {
+    title.firstChild.textContent = 'Para repasar';
+    G.missed.forEach(id => { const li = document.createElement('li'); li.textContent = GAMES[id].fact; list.append(li); });
+  } else {
+    title.firstChild.textContent = 'Sin errores';
+    const li = document.createElement('li'); li.textContent = 'Resolviste bien todos los retos que te tocaron. Intenta superar tu récord.'; list.append(li);
+  }
+  rv.append(title, list);
+  show('over'); window.scrollTo(0, 0);
+  ranking(G);
+  $('#card').hidden = true; $('#cardBtns').hidden = true; $('#cardWait').hidden = false; $('#cardMsg').textContent = '';
+  const run = G;
+  makeCard(run).then(blob => {
+    if (G !== run || !blob) return;
+    run.card = blob;
+    const img = $('#card'); if (img.dataset.url) URL.revokeObjectURL(img.dataset.url);
+    img.dataset.url = URL.createObjectURL(blob); img.src = img.dataset.url; img.hidden = false;
+    $('#cardWait').hidden = true; $('#cardBtns').hidden = false;
+  });
+}
+
+/* Result image */
+const loadImg = src => new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src; });
+async function makeCard(run) {
+  const W = 1080, H = 1350, cv = document.createElement('canvas');
+  cv.width = W; cv.height = H;
+  const x = cv.getContext('2d');
+  try { await Promise.all([document.fonts.load('600 64px "Pixelify Sans"'), document.fonts.load('400 40px "Pixelify Sans"')]); } catch (e) {}
+  const F = '"Pixelify Sans", ui-monospace, monospace';
+  x.fillStyle = '#E4F0EA'; x.fillRect(0, 0, W, H);
+  x.strokeStyle = '#000000'; x.lineWidth = 16; x.strokeRect(8, 8, W - 16, H - 16);
+  try { const logo = await loadImg(document.querySelector('.logo').src); x.drawImage(logo, (W - 640) / 2, 70, 640, 132); } catch (e) {}
+  const S = 13, ox = 124, oy = 250, re = /<rect x="([\d.]+)" y="([\d.]+)" width="([\d.]+)" height="([\d.]+)" fill="([^"]+)"/g;
+  let m; const svg = markup({}, LCD_HEART);
+  x.save(); x.beginPath(); x.rect(ox, oy, 64 * S, 48 * S); x.clip();
+  while ((m = re.exec(svg))) { x.fillStyle = m[5]; x.fillRect(ox + m[1] * S, oy + m[2] * S, m[3] * S, m[4] * S); }
+  x.restore();
+  x.lineWidth = 8; x.strokeRect(ox - 4, oy - 4, 64 * S + 8, 48 * S + 8);
+  x.fillStyle = '#000000'; x.textAlign = 'center'; x.textBaseline = 'alphabetic';
+  x.font = '600 64px ' + F;
+  x.fillText(run.name, W / 2, 970, 960);
+  x.fillText(`${run.score} puntos`, W / 2, 1115, 960);
+  x.font = '400 40px ' + F;
+  x.fillText(run.service, W / 2, 1030, 960);
+  x.fillText(`Aciertos: ${run.ok} de ${run.n}`, W / 2, 1185, 960);
+  x.fillText(`Arcade de la presión, ${new Date().toLocaleDateString('es-GT')}`, W / 2, 1245, 960);
+  return new Promise(res => cv.toBlob(res, 'image/png'));
+}
+const LCD_HEART = r(46, 15, 2, 1, C.red) + r(49, 15, 2, 1, C.red) + r(46, 16, 5, 1, C.red) + r(47, 17, 3, 1, C.red) + r(48, 18, 1, 1, C.red);
+let DL = null;
+const cardMsg = t => { $('#cardMsg').textContent = t; };
+async function saveCard() {
+  if (!G || !G.card) return;
+  if (!DL) {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(G.card); a.download = 'resultado-hearts-arcade.png';
+    document.body.append(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    cardMsg('Si no se descargó, mantén presionada la imagen para guardarla.');
+    return;
+  }
+  try {
+    const out = await DL.save({ filename: 'resultado-hearts-arcade.png', data: G.card });
+    if (out && out.status === 'saved') cardMsg('Imagen guardada.');
+  } catch (e) {
+    if (e && e.code === 'declined') return;
+    if (e && e.code === 'rate_limited') { cardMsg('Espera un momento e inténtalo otra vez.'); return; }
+    cardMsg('No se pudo guardar desde aquí. Mantén presionada la imagen para guardarla.');
+  }
+}
+async function shareCard() {
+  if (!G || !G.card) return;
+  const file = new File([G.card], 'resultado-hearts-arcade.png', { type: 'image/png' });
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try { await navigator.share({ files: [file], title: 'HEARTS Arcade', text: `${G.name}: ${G.score} puntos en el Arcade de la presión` }); return; }
+    catch (e) { if (e && e.name === 'AbortError') return; }
+  }
+  await saveCard();
+}
+$('#share').onclick = shareCard;
+$('#save').onclick = saveCard;
+if (window.claude && typeof window.claude.use === 'function') {
+  window.claude.use('downloads').then(d => { DL = d; }).catch(() => {});
+}
+
+/* Touch on the scene */
+const gp = e => { const rc = scene.getBoundingClientRect(); return { x: (e.clientX - rc.left) / rc.width * 64, y: (e.clientY - rc.top) / rc.height * 48 }; };
+const inBox = ([x, y, w, h], p) => p.x >= x && p.x < x + w && p.y >= y && p.y < y + h;
+scene.addEventListener('pointerdown', e => {
+  if (!active() || G.cur.data) return;
+  const p = gp(e), def = G.cur.def;
+  if (!inBox(def.box, p)) return;
+  if (def.kind === 'tap') { finish(true); return; }
+  G.drag = p;
+  try { scene.setPointerCapture(e.pointerId); } catch (err) {}
+});
+scene.addEventListener('pointermove', e => {
+  if (!active() || !G.drag) return;
+  const p = gp(e), dx = p.x - G.drag.x, dy = p.y - G.drag.y, dir = G.cur.def.dir;
+  if ((dir === 'up' && dy <= -5) || (dir === 'down' && dy >= 5) || (dir === 'left' && dx <= -5)) { G.drag = null; finish(true); }
+});
+['pointerup', 'pointercancel'].forEach(t => scene.addEventListener(t, () => { if (G) G.drag = null; }));
+document.addEventListener('visibilitychange', () => { if (G) G.t = performance.now(); });
+
+$('#play').onclick = start;
+$('#name').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); start(); } });
+$('#name').addEventListener('input', () => { $('#nameErr').hidden = true; });
+$('#service').addEventListener('input', () => { $('#nameErr').hidden = true; });
+$('#service').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); start(); } });
+try {
+  $('#name').value = localStorage.getItem('hearts-arcade-name') || '';
+  $('#service').value = localStorage.getItem('hearts-arcade-service') || '';
+} catch (e) {}
+
+/* Shared results in Google Sheets (see README) */
+async function ranking(run) {
+  if (!SHEET_URL) return;
+  const box = $('#rank'), msg = $('#rankMsg'), list = $('#rankList');
+  box.hidden = false; msg.hidden = false; msg.textContent = 'Guardando tu resultado…'; list.innerHTML = '';
+  try {
+    await fetch(SHEET_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ name: run.name, service: run.service, score: run.score, ok: run.ok, n: run.n }) });
+  } catch (e) {}
+  if (G !== run) return;
+  msg.textContent = 'Cargando ranking…';
+  try {
+    const res = await fetch(SHEET_URL + '?top=10', { cache: 'no-store' });
+    const data = await res.json();
+    if (G !== run) return;
+    const top = data.top || [];
+    if (!top.length) { msg.textContent = 'Todavía no hay resultados.'; return; }
+    msg.hidden = true;
+    top.forEach(p => { const li = document.createElement('li'); li.textContent = `${p.name} (${p.service}): ${p.score} puntos`; list.append(li); });
+  } catch (e) {
+    if (G === run) msg.textContent = 'No se pudo cargar el ranking. Revisa tu conexión a internet.';
+  }
+}
+$('#again').onclick = start;
+const b0 = best();
+$('#best').textContent = b0 ? `Tu récord: ${b0} puntos.` : '';
+</script>
+</body>
+</html>
